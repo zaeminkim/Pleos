@@ -1,7 +1,7 @@
 package com.gilnote.server.domain;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 public class PairCode {
@@ -14,12 +14,12 @@ public class PairCode {
     @Column(unique = true, nullable = false)
     private String code;
 
-    private LocalDateTime expiresAt;
+    private Instant expiresAt;
     private boolean used = false;
 
     protected PairCode() {}
 
-    public PairCode(Car car, String code, LocalDateTime expiresAt) {
+    public PairCode(Car car, String code, Instant expiresAt) {
         this.car = car;
         this.code = code;
         this.expiresAt = expiresAt;
@@ -28,7 +28,7 @@ public class PairCode {
     public Long getId() { return id; }
     public Car getCar() { return car; }
     public String getCode() { return code; }
-    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public Instant getExpiresAt() { return expiresAt; }
     public boolean isUsed() { return used; }
     public void markUsed() { this.used = true; }
 }

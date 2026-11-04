@@ -17,7 +17,7 @@ public class Note {
     @Enumerated(EnumType.STRING)
     private TriggerType triggerType;
 
-    private String placeName;
+    private String placeLabel;
     private Double lat;
     private Double lng;
     private Integer radiusM;

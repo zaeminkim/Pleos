@@ -1,22 +1,28 @@
 package com.gilnote.server.domain;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 public class Car {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String name;
+
     @Column(unique = true, nullable = false)
     private String carToken;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     protected Car() {}
 
-    public Car(String carToken) { this.carToken = carToken; }
+    public Car(String name, String carToken) {
+        this.name = name;
+        this.carToken = carToken;
+    }
 
     public Long getId() { return id; }
+    public String getName() { return name; }
     public String getCarToken() { return carToken; }
 }
