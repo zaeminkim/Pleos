@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>길쪽지 · 가족 연결</title>
+    <style>
+        body { margin: 0; font-family: system-ui, sans-serif; background: #F4F4F2; color: #1F1F1F; }
+        main { max-width: 420px; margin: 0 auto; padding: 48px 24px; display: flex; flex-direction: column; gap: 16px; }
+        h1 { font-size: 26px; margin: 0 0 8px; }
+        label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #6B6B67; }
+        input { height: 48px; padding: 0 14px; font-size: 16px; border: 2px solid #9A9A96; border-radius: 12px; }
+        button { height: 56px; border: 0; border-radius: 14px; background: #1F1F1F; color: #F4F4F2; font-size: 18px; font-weight: 700; }
+        #msg { min-height: 24px; font-size: 15px; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>가족 차에 연결하기</h1>
+    <label>연결 코드 (6자리)
+        <input id="code" inputmode="numeric" maxlength="6">
+    </label>
+    <label>내 이름
+        <input id="name" placeholder="예) 엄마">
+    </label>
+    <button id="go">연결하기</button>
+    <p id="msg"></p>
+</main>
+<script>
+    const codeInput = document.getElementById('code');
+    const nameInput = document.getElementById('name');
+    const msg = document.getElementById('msg');
+
+    // QR 주소에 ?code=123456 이 있으면 자동으로 채움
+    codeInput.value = new URLSearchParams(location.search).get('code') || '';
+
+    document.getElementById('go').onclick = async () => {
+        msg.textContent = '연결 중...';
+        try {
+            const res = await fetch('/api/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: codeInput.value.trim(), name: nameInput.value.trim() })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                msg.textContent = data.message || '연결에 실패했어요';
+                return;
+            }
+            localStorage.setItem('memberToken', data.memberToken);
+            localStorage.setItem('memberName', data.name);
+            msg.textContent = `${data.carName}에 연결됐어요! 이제 쪽지를 보낼 수 있어요.`;
+        } catch (e) {
+            msg.textContent = '서버에 연결할 수 없어요';
+        }
+    };
+</script>
+</body>
+</html>
