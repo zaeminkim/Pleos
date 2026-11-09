@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>길쪽지 · 녹음</title>
+<style>
+  body { margin: 0; font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: #F4F4F2; color: #1F1F1F; }
+  main { max-width: 420px; margin: 0 auto; min-height: 100vh; box-sizing: border-box; padding: 32px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .top { display: flex; justify-content: space-between; font-size: 15px; }
+  .top a { color: #6B6B67; }
+  .card { padding: 16px; border: 2px solid #9A9A96; border-radius: 14px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
+  .muted { font-size: 14px; color: #6B6B67; }
+  .card strong { font-size: 18px; }
+  .center { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 280px; }
+  .time { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rec { width: 96px; height: 96px; border-radius: 48px; border: 4px solid #1F1F1F; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .rec:disabled { opacity: .4; cursor: default; }
+  .rec .dot { width: 36px; height: 36px; border-radius: 18px; background: #C0392B; }
+  .rec.on .dot { width: 32px; height: 32px; border-radius: 6px; background: #1F1F1F; }
+  audio { width: 100%; }
+  .row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  button.sub { height: 48px; font-size: 16px; border: 2px solid #9A9A96; border-radius: 12px; background: #fff; color: #1F1F1F; }
+  button.primary { height: 56px; border: 0; border-radius: 14px; background: #1F1F1F; color: #F4F4F2; font-size: 18px; font-weight: 700; }
+  button:disabled { opacity: .4; }
+  button:focus-visible, a:focus-visible { outline: 3px solid #0f6e78; outline-offset: 2px; }
+  #msg { min-height: 22px; margin: 0; font-size: 15px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <span id="who">새 쪽지</span>
+    <a href="sent.html">보낸 쪽지 보기</a>
+  </div>
+
+  <div class="card">
+    <span class="muted">들리는 곳</span>
+    <strong id="place">회사 앞 빵집 · 200m 안</strong>
+  </div>
+
+  <div class="center">
+    <div id="time" class="time">0:00</div>
+    <div class="muted">최대 30초</div>
+    <button id="rec" class="rec" type="button" aria-label="녹음 시작"><span class="dot"></span></button>
+    <div id="hint" class="muted">버튼을 눌러 녹음을 시작하세요</div>
+  </div>
+
+  <audio id="preview" controls hidden></audio>
+  <div class="row">
+    <button id="again" class="sub" type="button" disabled>다시 녹음</button>
+  </div>
+  <button id="send" class="primary" type="button" disabled>쪽지 보내기</button>
+  <p id="msg"></p>
+</main>
+
+<script>
+  const MAX_SEC = 30;
+  const $ = (id) => document.getElementById(id);
+
+  // 장소: 나중에 place.html이 주소로 넘겨줌. 지금은 기본값(회사 앞 빵집)
+  const q = new URLSearchParams(location.search);
+  const place = {
+    lat: q.get('lat') || '37.5665',
+    lng: q.get('lng') || '126.9780',
+    radiusM: q.get('radius') || '200',
+    label: q.get('label') || '회사 앞 빵집'
+  };
+  $('place').textContent = `${place.label} · ${place.radiusM}m 안`;
+
+  // 연결할 때 저장해 둔 토큰
+  let token = null, name = null;
+  try { token = localStorage.getItem('memberToken'); name = localStorage.getItem('memberName'); } catch (e) {}
+  if (name) $('who').textContent = `${name} · 새 쪽지`;
+  if (!token) {
+    $('rec').disabled = true;
+    $('msg').textContent = '먼저 차 화면의 QR을 찍어 연결해 주세요.';
+  }
+
+  // 이 브라우저가 녹음할 수 있는 형식 고르기 (크롬: webm, 아이폰: mp4)
+  function pickMime() {
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+    return ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+      .find((t) => MediaRecorder.isTypeSupported(t)) || '';
+  }
+
+  let recorder = null, chunks = [], blob = null, timer = null, startedAt = 0;
+
+  function showTime(sec) {
+    const s = Math.floor(sec);
+    $('time').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  async function startRec() {
+    $('msg').textContent = '';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      $('msg').textContent = '이 주소에서는 녹음할 수 없어요. https 주소로 열어 주세요.';
+      return;
+    }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      $('msg').textContent = '마이크 사용을 허용해 주세요. (브라우저 주소창의 권한 설정)';
+      return;
+    }
+    const mime = pickMime();
+    recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    chunks = [];
+    recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      blob = new Blob(chunks, { type: recorder.mimeType || mime || 'audio/webm' });
+      $('preview').src = URL.createObjectURL(blob);
+      $('preview').hidden = false;
+      $('send').disabled = false;
+      $('again').disabled = false;
+      $('hint').textContent = '들어 보고 괜찮으면 보내세요';
+    };
+    recorder.start();
+    startedAt = Date.now();
+    $('rec').classList.add('on');
+    $('rec').setAttribute('aria-label', '녹음 멈추기');
+    $('hint').textContent = '녹음 중이에요. 다시 누르면 멈춰요';
+    timer = setInterval(() => {
+      const sec = (Date.now() - startedAt) / 1000;
+      showTime(sec);
+      if (sec >= MAX_SEC) stopRec();
+    }, 200);
+  }
+
+  function stopRec() {
+    clearInterval(timer);
+    $('rec').classList.remove('on');
+    $('rec').setAttribute('aria-label', '녹음 시작');
+    $('rec').disabled = true;            // 다시 녹음하려면 '다시 녹음'
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  }
+
+  $('rec').onclick = () => {
+    if (recorder && recorder.state === 'recording') stopRec();
+    else startRec();
+  };
+
+  $('again').onclick = () => {
+    blob = null;
+    $('preview').hidden = true;
+    $('preview').removeAttribute('src');
+    $('send').disabled = true;
+    $('again').disabled = true;
+    $('rec').disabled = false;
+    showTime(0);
+    $('hint').textContent = '버튼을 눌러 녹음을 시작하세요';
+  };
+
+  $('send').onclick = async () => {
+    if (!blob) return;
+    $('send').disabled = true;
+    $('msg').textContent = '보내는 중...';
+    const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+    const fd = new FormData();
+    fd.append('audio', blob, `note.${ext}`);
+    fd.append('triggerType', 'PLACE');
+    fd.append('lat', place.lat);
+    fd.append('lng', place.lng);
+    fd.append('radiusM', place.radiusM);
+    fd.append('placeLabel', place.label);
+    try {
+      const res = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'X-Member-Token': token, 'ngrok-skip-browser-warning': 'true' },
+        body: fd
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        $('msg').textContent = data.message || '보내지 못했어요. 다시 시도해 주세요.';
+        $('send').disabled = false;
+        return;
+      }
+      location.href = 'sent.html';
+    } catch (e) {
+      $('msg').textContent = '서버에 연결할 수 없어요.';
+      $('send').disabled = false;
+    }
+  };
+</script>
+</body>
+</html>

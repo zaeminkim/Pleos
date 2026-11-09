@@ -94,12 +94,15 @@
     "noteId": 42,
     "triggerType": "PLACE",
     "placeLabel": "회사 앞 빵집",
+    "seat": null,
     "status": "PLAYED",
     "createdAt": "2026-11-09T03:12:00Z",
     "playedAt": "2026-11-09T09:42:00Z"
   }
 ]
 ```
+- 아직 안 들은 쪽지는 `playedAt`이 `null`
+- 토큰이 없거나 틀리면 `401 INVALID_MEMBER_TOKEN`
 
 ## 6. 차의 쪽지 목록 `GET /api/cars/notes`
 헤더: `X-Car-Token`

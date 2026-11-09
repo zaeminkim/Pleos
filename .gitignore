@@ -1,0 +1,38 @@
+# ===== 공통 =====
+.DS_Store
+Thumbs.db
+*.log
+.env
+*.secret
+
+# ===== IDE (Android Studio / IntelliJ) =====
+.idea/
+*.iml
+out/
+
+# ===== Gradle 빌드 결과 =====
+.gradle/
+build/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ===== Android =====
+local.properties
+# 앱 서명 열쇠는 절대 올리지 않기
+*.jks
+*.keystore
+keystore.properties
+
+# ===== 서버 (Spring) =====
+# H2 DB 파일과 업로드된 녹음 파일
+server/data/
+*.mv.db
+*.trace.db
+# 테스트할 때 만든 녹음 파일
+server/*.webm
+server/*.m4a
+
+# ===== 제출용 APK는 올린다 =====
+!apk/*.apk
