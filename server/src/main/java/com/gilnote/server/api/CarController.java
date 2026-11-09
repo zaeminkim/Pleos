@@ -21,6 +21,7 @@ public class CarController {
     private final PairCodeRepository pairCodeRepository;
     private final SecureRandom random = new SecureRandom();
 
+    //DI
     public CarController(CarRepository carRepository, PairCodeRepository pairCodeRepository) {
         this.carRepository = carRepository;
         this.pairCodeRepository = pairCodeRepository;
@@ -28,7 +29,7 @@ public class CarController {
 
     public record RegisterRequest(String name) {}
 
-    // API 1. 차 등록
+    // API 1. 차 등록-> 차에 Id, 토큰을 배정
     @PostMapping("/register")
     public Map<String, String> register(@RequestBody(required = false) RegisterRequest req) {
         String name = (req == null || req.name() == null || req.name().isBlank())
@@ -38,7 +39,7 @@ public class CarController {
         return Map.of("carId", "c_" + car.getId(), "carToken", carToken);
     }
 
-    // API 2. 연결 코드 받기
+    // API 2. 차의 토큰을 바탕으로 pair-code를 서버로부터 받음
     @PostMapping("/pair-code")
     public ResponseEntity<?> pairCode(
             @RequestHeader(value = "X-Car-Token", required = false) String carToken) {

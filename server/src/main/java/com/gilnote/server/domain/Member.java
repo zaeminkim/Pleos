@@ -7,6 +7,7 @@ public class Member {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+//여러명이 하나에 속한다.
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private Car car;
 
