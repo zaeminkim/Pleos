@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>길쪽지 · 보낸 쪽지</title>
+<style>
+  body { margin: 0; font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: #F4F4F2; color: #1F1F1F; }
+  main { max-width: 420px; margin: 0 auto; min-height: 100vh; box-sizing: border-box; padding: 40px 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .note { padding: 18px; border: 2px solid #9A9A96; border-radius: 16px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+  .note.played { border: 3px solid #1F1F1F; }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .title { font-size: 17px; font-weight: 700; }
+  .badge { font-size: 13px; padding: 4px 10px; border-radius: 10px; white-space: nowrap; }
+  .badge.PENDING { border: 2px dashed #9A9A96; }
+  .badge.DELIVERED { border: 2px solid #9A9A96; }
+  .badge.PLAYED { background: #1F1F1F; color: #F4F4F2; font-weight: 700; }
+  .sub { font-size: 14px; color: #6B6B67; }
+  .empty { color: #6B6B67; font-size: 15px; padding: 24px 0; }
+  #list { display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
+  nav { display: flex; justify-content: space-around; padding-top: 14px; border-top: 2px solid #D6D6D2; font-size: 15px; }
+  nav a { color: #6B6B67; }
+  nav span { font-weight: 700; }
+  #msg { margin: 0; font-size: 14px; color: #6B6B67; }
+</style>
+</head>
+<body>
+<main>
+  <h1>보낸 쪽지</h1>
+  <p id="msg"></p>
+  <div id="list"><div class="empty">불러오는 중...</div></div>
+  <nav>
+    <a href="record.html">새 쪽지</a>
+    <span>보낸 쪽지</span>
+  </nav>
+</main>
+
+<script>
+  const LABEL = { PENDING: '전달 대기', DELIVERED: '차에 도착', PLAYED: '들었어요 ✓' };
+  const SUB = {
+    PENDING: '차가 아직 받아 가지 않았어요',
+    DELIVERED: '차가 받아 두었어요 · 아직 안 들음'
+  };
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hhmm = (iso) => new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  let token = null;
+  try { token = localStorage.getItem('memberToken'); } catch (e) {}
+
+  async function load() {
+    if (!token) {
+      document.getElementById('list').innerHTML = '<div class="empty">먼저 차 화면의 QR을 찍어 연결해 주세요.</div>';
+      return;
+    }
+    try {
+      const res = await fetch('/api/notes', { headers: { 'X-Member-Token': token, 'ngrok-skip-browser-warning': 'true' } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        document.getElementById('msg').textContent = (data.message || '목록을 불러오지 못했어요') + ` (에러 ${res.status})`;
+        return;
+      }
+      document.getElementById('msg').textContent = '';
+      render(data);
+    } catch (e) {
+      document.getElementById('msg').textContent = '서버에 연결할 수 없어요. 10초 뒤 다시 시도해요';
+    }
+  }
+
+  function render(notes) {
+    const list = document.getElementById('list');
+    if (!notes.length) {
+      list.innerHTML = '<div class="empty">아직 보낸 쪽지가 없어요. 아래 "새 쪽지"로 남겨 보세요.</div>';
+      return;
+    }
+    list.innerHTML = notes.map((n) => {
+      const title = n.triggerType === 'PLACE' ? (n.placeLabel || '장소 쪽지') : '함께 탔을 때';
+      const sub = n.status === 'PLAYED'
+        ? `${hhmm(n.playedAt)}에 차에서 들었어요`
+        : `${SUB[n.status] || ''} · ${hhmm(n.createdAt)}에 보냄`;
+      return `<div class="note ${n.status === 'PLAYED' ? 'played' : ''}">
+        <div class="head"><span class="title">${esc(title)}</span><span class="badge ${esc(n.status)}">${LABEL[n.status] || esc(n.status)}</span></div>
+        <span class="sub">${esc(sub)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  load();
+  setInterval(load, 10000);   // 10초마다 새로고침 → "들었어요" 갱신
+</script>
+</body>
+</html>
