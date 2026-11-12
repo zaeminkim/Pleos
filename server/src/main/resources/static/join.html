@@ -49,8 +49,8 @@
             }
             localStorage.setItem('memberToken', data.memberToken);
             localStorage.setItem('memberName', data.name);
-            msg.textContent = `${data.carName}에 연결됐어요! 잠시 후 쪽지 남기기 화면으로 이동해요.`;
-            setTimeout(() => { location.href = 'record.html'; }, 1500);
+            msg.textContent = `${data.carName}에 연결됐어요! 잠시 후 장소 고르기 화면으로 이동해요.`;
+            setTimeout(() => { location.href = 'place.html'; }, 1500);
         } catch (e) {
             msg.textContent = '서버에 연결할 수 없어요';
         }

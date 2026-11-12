@@ -37,6 +37,7 @@
   <div class="card">
     <span class="muted">들리는 곳</span>
     <strong id="place">회사 앞 빵집 · 200m 안</strong>
+    <a href="place.html" class="muted">장소 바꾸기</a>
   </div>
 
   <div class="center">
@@ -58,7 +59,7 @@
   const MAX_SEC = 30;
   const $ = (id) => document.getElementById(id);
 
-  // 장소: 나중에 place.html이 주소로 넘겨줌. 지금은 기본값(회사 앞 빵집)
+  // 장소: place.html이 주소(?lat=..&lng=..&radius=..&label=..)로 넘겨줌. 없으면 기본값
   const q = new URLSearchParams(location.search);
   const place = {
     lat: q.get('lat') || '37.5665',
