@@ -2,8 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="pleos.car.permission.CAR_DOORS" />
+    <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
 
-    <application
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
+    <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
+    <application android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -13,6 +18,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Pleos">
 
+        <activity android:name=".DoorTestActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
